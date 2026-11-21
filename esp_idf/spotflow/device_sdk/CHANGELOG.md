@@ -1,1 +1,162 @@
-../../../CHANGELOG.md
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## Unreleased
+
+### Added
+* Added Zephyr OTA updates through a trusted BLE gateway, including resumable artifact
+  downloads, configurable request timeouts, pause, and cancellation.
+* Added BLE protocol 1.1 capabilities and optional ACK/NACK responses for configuration,
+  OTA commands, and artifact replies.
+* Added a TI LP-EM-CC35X1 BLE OTA sample profile and integration guide using PSA FWU.
+* Added a Zephyr PSA Firmware Update backend and OTA sample for TI LP-EM-CC35X1.
+  TI image confirmation requires an application-requested `psa_fwu_request_reboot()` after
+  `spotflow_confirm_main_firmware_image()`; success is reported after the next startup
+  verifies durable confirmation.
+* Added opt-in Zephyr compact logs, which send format-string addresses, raw arguments, and source name addresses for cloud formatting.
+* Added TI LP-EM-CC35X1 support to the Zephyr logs, metrics, coredumps, and BLE samples.
+* Added a west manifest for TI CC35X1 using SimpleLink Zephyr v4.4.0-ti-10.10.00.
+* Added generated battery-level and accelerometer-magnitude metrics to the Zephyr BLE sample.
+* Added Zephyr BLE sample support for the Silicon Labs xG24 EK2703A
+* Added application-defined typed labels to Zephyr Session Metadata messages.
+* Added BLE support for TI LP-EM-CC2340R5
+* Added a west manifest for TI's SimpleLink Zephyr downstream.
+* Added runtime ingest keys for Zephyr via `CONFIG_SPOTFLOW_INGEST_KEY_DYNAMIC` and the required `spotflow_on_ingest_key_requested()` callback, while retaining compile-time validation of static ingest keys.
+
+### Changed
+* Moved BLE receive reassembly and message handling to a dedicated thread, with
+  independent buffers for configuration, OTA commands, and artifact replies and
+  stale-frame rejection across reconnects.
+* Zephyr BLE OTA now requires encrypted service access by default through
+  `CONFIG_SPOTFLOW_BLE_REQUIRE_ENCRYPTION`. Applications must enable `CONFIG_BT_SMP`
+  and configure trusted pairing; the sample disables encryption for development.
+* Scoped Zephyr OTA HTTP dependencies and URL preparation to the MQTT socket transport
+  so BLE OTA builds do not require the HTTP client or URL parser.
+* Automatic Zephyr main-firmware updates now reject downloaded images whose build ID
+  matches the currently running firmware, before requesting installation.
+* Automatic MCUboot updates now require directly readable MCUboot v1 images. Encrypted,
+  compressed, split, and other unsupported image formats are rejected during download.
+* Made Zephyr metric-name storage configurable so constrained applications can reduce per-registry-slot static RAM usage.
+* Added manifest for Microchip zephyr downstream
+* Treated a full Zephyr metrics queue as expected backpressure instead of logging each dropped metric as a warning and error.
+* Replaced Zephyr Kconfig option `CONFIG_SPOTFLOW_OTA_DOWNLOAD_RETRY_DELAY_MS` by `CONFIG_SPOTFLOW_OTA_DOWNLOAD_RETRY_INITIAL_DELAY_MS` and `CONFIG_SPOTFLOW_OTA_DOWNLOAD_RETRY_MAX_DELAY_MS`, enabling exponential backoff with jitter.
+* Scoped Zephyr Mbed TLS and socket defaults to the MQTT transport so BLE-only workspaces do not require Mbed TLS.
+
+### Fixed
+* Fixed potential deadlocks when starting a BLE artifact download recursively from
+  another download's block callback by returning `-EBUSY`, even across instances.
+* Fixed OTA cancellation results not being reported after restoring an unfinished update attempt.
+* Fixed Zephyr reset-cause metrics on targets that omit optional bootloader and flash reset flags.
+* Fixed TLS certificate parsing failures in the Zephyr TI CC35X1 MQTT samples.
+* Fixed nRF7002 DK Wi-Fi connection issue on nRF Connect SDK 3.2.4 when WMM is used.
+* Fixed compilation and devicetree configuration for Zephyr 4.5.
+
+## [0.9.0] - 2026-08-06
+
+### Added
+* Added Metrics in ESP IDF
+* Added initial Zephyr BLE transport with a Spotflow GATT service for session metadata, telemetry notifications, and desired/reported configuration exchange. Current BLE support covers logs, metrics, and configuration framing
+* Added Zephyr BLE transport support for coredump telemetry chunks.
+* Added coredump support for siwx917
+* Added coredump support for saving coredump to memory
+* Added implementation of over-the-air (OTA) firmware updates for Zephyr.
+
+
+### Fixed
+* Fixed ESP-IDF Spotflow log backend parsing for Log V1 prefixes and corrected `va_list` handling in the `esp_log_set_vprintf()` hook.
+* Fixed ESP-IDF log CBOR encoding to omit unknown severity and missing source labels instead of emitting empty fallback metadata.
+* Fixed ESP-IDF coredump example Wi-Fi retry logic to clean up Wi-Fi state before reconnect attempts, preventing duplicate-netif assertion failures.
+* Added `LOG_VERSION_1` dependency for the ESP-IDF Spotflow log backend.
+* Added more buffer size for TLS to reduce handshake failures and enabled Server Name Indication (SNI).
+* Fixed Zephyr BLE framing validation and RX reassembly state handling for malformed fragments, zero-length payload rejection, and safer TX characteristic access.
+
+## [0.8.0] - 2026-05-07
+
+### Added
+* Added sample for Ethernet on FRDM_RW612
+* Added Coredump for ESP IDF.
+* Added example for ESP IDF(tested on esp32s3, esp32c3, esp32c6).
+* Added Readmes for examples and the components.
+* New updated Kconfigs with more options.
+* Added support for ESP IDF v6.0.
+* Added cloud config log control for the ESP IDF component.
+* Added CI/CD pipeline for ESP IDF.
+* Added CI/CD pipeline for Zephyr.
+* Added list of supported boards and generation of quickstart.json file.
+* Added spotflowup.sh and spotflowup.ps1 scripts for workspace setup.
+* Added interfaces for reporting metrics to Spotflow.
+* Added device uptime to coredump chunks.
+* Added support for Silicon Labs board DK2605A (siwx917_dk2605a).
+* Added recognition of ENOSYS status when getting reset cause.
+* Added a hash check on coredump partition to make sure coredump is valid.
+* Added Zephyr Kconfig option `CONFIG_SPOTFLOW_LOG_INCLUDE_BODY_TEMPLATE` to control whether log body template is sent with log body, reducing CBOR payload size when disabled.
+* Added ESP IDF component tests.
+* Added support for Zephyr v4.4.0.
+* Fixed a bug in ESP IDF part which didn't allow parts of the sdk without logging.
+
+
+
+### Removed
+* Removed configdefault for MAIN_STACK_SIZE
+
+### Fixed
+* Added check of `CONFIG_MBEDTLS_MPI_MAX_SIZE` in CMake and explicitly set it for Nordic boards in samples
+* Hiding CPU system metrics on unsupported platforms
+* Added const modifier to the variable holding the certificate
+* Fixed checking of errors during log message encoding
+* Added unencoded and unallocated log messages to drop statistics
+* Deferred Wi-Fi reconnect from `wifi_event_handler` to workqueue context in Zephyr samples to avoid callback stack overflow; retry delay set to 2 seconds
+* Removed unnecessary heap allocation from the Zephyr log CBOR output context and heartbeat path by switching them to static storage
+
+## [0.7.0] - 2025-11-18
+### Added
+* Added support for Zephyr v4.2.0
+### Fixed
+* Fixed missing Kconfig dependency on Zephyr connection manager
+
+## [0.6.0] - 2025-10-23
+### Added
+* Added ESP-IDF module with support for logging
+* Added ability to remotely configure the minimal severity of sent log messages in Zephyr
+### Fixed
+* Fixed coredump example in debug mode on Nordic boards in Zephyr
+
+## [0.5.1] - 2025-09-25
+### Added
+* Added support for parsing latest Let's Encrypt certificates on Nordic boards
+
+## [0.5.0] - 2025-08-26
+### Added
+* Added coredumps functionality
+* Obtaining device ID from Zephyr if not provided in Kconfig
+* Support for overriding device ID in code
+* Computing build ID and sending it in session metadata and core dumps
+### Changed
+* Changed KConfig option LOG_BACKEND_SPOTFLOW SPOTFLOW_LOG_BACKEND to match other options
+* Updated default kconfig values to be more stable
+
+## [0.4.0] - 2025-07-23
+### Fixed
+* Fixed logs memory leak
+
+## [0.3.0] - 2025-07-09
+### Changed
+* Used mbedtls heap by default to prevent heap fragmentation and certificate chain validation issues
+
+## [0.2.0] - 2025-07-01
+### Added
+* Added propagation of the message sequence number to the message metadata
+### Fixed
+* Unable to process DHCP offer in Zephyr v4.1.0
+* File descriptor exhaustion in Zephyr v4.1.0
+
+## [0.1.0] - 2025-06-25
+### Added
+* Added initial implementation of Spotflow Device SDK
+* Added sample for NXP Board FRDM-RW612
+* Added sample for Nordic board NRF7002DK
+* Added sample for Espressif board ESP32-C3-DevKitC
