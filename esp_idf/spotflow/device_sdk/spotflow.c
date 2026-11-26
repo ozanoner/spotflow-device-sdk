@@ -71,3 +71,31 @@ void spotflow_init(void)
 	}
 #endif
 }
+
+/**
+ * @brief
+ * @details To utilize the esp_log_set_vprintf function to expose the logs
+ * @param device_id The device ID to be used for MQTT connection
+ * @param ingest_key The ingest key to be used for MQTT connection
+ */
+void spotflow_init_with_cred(const char* device_id, const char* ingest_key)
+{
+	spotflow_mqtt_event_group_init(); //Initialize the MQTT event group
+#ifdef CONFIG_SPOTFLOW_LOG_BACKEND
+	original_vprintf = esp_log_set_vprintf(spotflow_log_backend);
+	spotflow_queue_init(); //Initilize the queue
+	spotflow_config_init();
+#endif
+
+#ifdef CONFIG_SPOTFLOW_METRICS
+	spotflow_metrics();
+#endif
+	// Calling the mqtt_start from the init function.
+	spotflow_mqtt_app_start_with_cred(device_id, ingest_key);
+#ifdef CONFIG_ESP_COREDUMP_ENABLE
+	if (spotflow_is_coredump_available()) {
+		spotflow_queue_coredump_init();
+		spotflow_coredump_backend();
+	}
+#endif
+}

@@ -10,6 +10,7 @@ extern "C" {
 
 extern vprintf_like_t original_vprintf;
 void spotflow_init(void);
+void spotflow_init_with_cred(const char* device_id, const char* ingest_key);
 
 #if CONFIG_SPOTFLOW_MESSAGE_TERMINAL || CONFIG_SPOTFLOW_DEBUG_MESSAGE_TERMINAL
 

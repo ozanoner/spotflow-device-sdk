@@ -13,6 +13,8 @@
 #include <sys/param.h>
 
 static const char* TAG = "spotflow_testing";
+static const char* device_id = "spotflow_testing";
+static const char* ingest_key = "spotflow_testing";
 
 void app_main(void)
 {
@@ -34,7 +36,7 @@ void app_main(void)
      */
 	ESP_ERROR_CHECK(example_connect());
 
-	spotflow_init();
+	spotflow_init_with_cred(device_id, ingest_key);
 
 	int test_num = 1;
 	while (1) {
@@ -59,6 +61,6 @@ void app_main(void)
 			ESP_LOGI(TAG, "[APP] Free memory: %" PRIu32 " bytes",
 				 esp_get_free_heap_size());
 		}
-		vTaskDelay(5000/portTICK_PERIOD_MS); // Delay for 5s
+		vTaskDelay(5000 / portTICK_PERIOD_MS); // Delay for 5s
 	}
 }

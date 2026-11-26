@@ -30,8 +30,8 @@ EventGroupHandle_t spotflow_mqtt_event_group;
 
 #if CONFIG_BROKER_CERTIFICATE_OVERRIDDEN == 1
 static const uint8_t mqtt_spotflow_io_pem_start[] =
-    "-----BEGIN CERTIFICATE-----\n" CONFIG_BROKER_CERTIFICATE_OVERRIDE
-    "\n-----END CERTIFICATE-----";
+	"-----BEGIN CERTIFICATE-----\n" CONFIG_BROKER_CERTIFICATE_OVERRIDE
+	"\n-----END CERTIFICATE-----";
 #else
 extern const uint8_t mqtt_spotflow_io_pem_start[] asm("_binary_x1_root_pem_start");
 #endif
@@ -82,7 +82,7 @@ static void spotflow_mqtt_event_handler(void* handler_args, esp_event_base_t bas
 		SPOTFLOW_LOG("Message published. \n\n");
 		if (mqtt_publish_task_handle &&
 		    esp_mqtt_client_get_outbox_size(event->client) <
-			CONFIG_SPOTFLOW_MQTT_TASK_SIZE / 2) {
+			    CONFIG_SPOTFLOW_MQTT_TASK_SIZE / 2) {
 			xTaskNotifyGive(mqtt_publish_task_handle);
 		}
 		break;
@@ -147,6 +147,40 @@ void spotflow_mqtt_app_start(void)
 	esp_mqtt_client_start(spotflow_client);
 }
 
+void spotflow_mqtt_app_start_with_cred(const char* dev_id, const char* ingest_key)
+{
+	static char device_id[32]; // For saving the device ID
+	assert(ingest_key != NULL && strlen(ingest_key) != 0); // Ingest key must be provided
+
+	// Setting mqtt username
+	if (dev_id != NULL && strlen(dev_id) != 0) {
+		snprintf(device_id, sizeof(device_id), "%s", dev_id);
+	} else {
+		uint8_t mac[6]; //The Mac Address string
+		esp_read_mac(mac, ESP_MAC_WIFI_STA); // Read the mac Address
+
+		snprintf(device_id, sizeof(device_id), "%02X%02X%02X%02X%02X%02X", mac[0], mac[1],
+			 mac[2], mac[3], mac[4], mac[5]); // Reading and adding mac Address.
+	}
+
+	const esp_mqtt_client_config_t mqtt_cfg = {
+		.broker = { .address.uri = CONFIG_SPOTFLOW_SERVER_HOSTNAME,
+			    .verification.certificate = (const char*)mqtt_spotflow_io_pem_start },
+		.credentials.username = device_id,
+		.credentials.authentication.password = ingest_key,
+#if CONFIG_MQTT_PROTOCOL_5
+		.session.protocol_ver = MQTT_PROTOCOL_V_5, // Use MQTT v5 if enabled
+#else
+		.session.protocol_ver = MQTT_PROTOCOL_V_3_1_1, // Default otherwise
+#endif
+	};
+
+	spotflow_client = esp_mqtt_client_init(&mqtt_cfg);
+	esp_mqtt_client_register_event(spotflow_client, ESP_EVENT_ANY_ID,
+				       spotflow_mqtt_event_handler, NULL);
+	esp_mqtt_client_start(spotflow_client);
+}
+
 /**
  * @brief Seperate Task for publishing the mqtt messages.
  *
@@ -155,8 +189,8 @@ void spotflow_mqtt_app_start(void)
 void spotflow_mqtt_publish(void* pvParameters)
 {
 	const EventBits_t ALL_BITS = SPOTFLOW_MQTT_NOTIFY_COREDUMP |
-	    SPOTFLOW_MQTT_NOTIFY_CONFIG_MSG | SPOTFLOW_MQTT_NOTIFY_LOGS |
-	    SPOTFLOW_MQTT_NOTIFY_METRICS;
+		SPOTFLOW_MQTT_NOTIFY_CONFIG_MSG | SPOTFLOW_MQTT_NOTIFY_LOGS |
+		SPOTFLOW_MQTT_NOTIFY_METRICS;
 
 	while (1) {
 		EventBits_t notify_value = xEventGroupWaitBits(spotflow_mqtt_event_group, ALL_BITS,
@@ -330,7 +364,7 @@ void spotflow_mqtt_on_message(const char* topic, int topic_len, const uint8_t* d
 int spotflow_mqtt_publish_message(const char* topic, const uint8_t* data, int len, int qos)
 {
 	int msg_id =
-	    esp_mqtt_client_publish(spotflow_client, topic, (const char*)data, len, qos, 0);
+		esp_mqtt_client_publish(spotflow_client, topic, (const char*)data, len, qos, 0);
 
 	if (msg_id < 0) {
 		SPOTFLOW_LOG("Error %d occurred sending MQTT (log). Retrying\n", msg_id);
